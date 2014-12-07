@@ -73,7 +73,6 @@ function pop_foe()
 	local foe = {}
 	local margin = 50
 	repeat 
-		
 		foe.x = math.random(margin, love.graphics.getWidth()-margin) --
 	until (foe.x-player.x)^2 > 10000
 	foe.y = 400
@@ -111,6 +110,7 @@ function update_colliders(dt)
 	end
 	
 	player.collider:moveTo(player.x+player.hit_width/2, player.y+player.hit_height/2)
+	--player.weapon.collider:moveTo(player.x-10, player.y-10)
 	Collider:update(dt)
 end	
 
@@ -160,13 +160,17 @@ function love.load()
 	player.hspeed = 330
 	player.can_jump = false
 	player.is_jumping = true
+	player.is_attacking = false
 	player.touching_right_wall = false
 	player.touching_left_wall = false
 	
-	--player.weapon = {}
-	--player.weapon.type = "bat"
-	--player.weapon.length = 10
-	--player.weapon.collider = Collider:addRectangle()
+	--[[player.weapon = {}
+	player.weapon.type = "bat"
+	player.weapon.length = 10
+	player.weapon.width = 2
+	player.weapon.angle = 0
+	player.weapon.collider = Collider:addRectangle(player.x-10, player.y-10, player.weapon.width, player.weapon.length)
+	player.weapon.collider.type = 5 -- type == weapon]]--
 	
 	floor = {}
 	floor.x = 0
@@ -221,18 +225,20 @@ function love.update(dt)
 			for i=#foes, 1, -1 do
 				local foe = foes[i]
 				if (foe.x+foe.width/2 - player.x+player.width/2)^2 + (foe.y+foe.height/2 - player.y+player.height/2)^2 < 10000 then
-					--current_animation = swing_weapon
-					foe.collider = nil
-					table.remove(foes, i)
-					current_combo = current_combo + 1 
-					print("current combo"..current_combo)
-					Timer.clear()
-					Timer.add(2, break_combo)
-					Timer.add(0.1, function() if freeze then freeze = false end end)
-					if spawn_delay > 0.7 then
-						spawn_delay = spawn_delay - spawn_delay/10
-					end
-					freeze = true
+				--if foe.x+foe.width/2 - player.x+pla
+					--if player.is_attacking == false then
+						table.remove(foes, i)
+						current_combo = current_combo + 1 
+						print("current combo"..current_combo)
+						Timer.add(2, break_combo)
+						Timer.add(0.1, function() if freeze then freeze = false end end)
+						if spawn_delay > 0.7 then
+							spawn_delay = spawn_delay - spawn_delay/10
+						end
+						freeze = true
+						--strike()
+						--end
+					--current_animation = swing_weapon	
 				end
 			end
 		end
@@ -256,6 +262,8 @@ function love.draw()
 	--love.graphics.rectangle("line", player.x, player.y, player.width, player.height)
 	floor.collider:draw('line')
 	ceiling.collider:draw('line')
+	
+	--player.weapon.collider:draw('line')
 	
 	for i=1, #foes do
 		local foe = foes[i]
