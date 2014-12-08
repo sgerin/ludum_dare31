@@ -3,6 +3,8 @@ HC = require "hardoncollider"
 Gamestate = require "hump.gamestate"
 Timer = require "hump.timer"
 --Camera = require "hump.camera"
+local unpack = unpack or table.unpack
+
 
 function on_collision(dt, shape_a, shape_b, mtv_x, mtv_y)
 	if shape_a.genre == 1 or shape_b.genre == 1 then
@@ -11,9 +13,10 @@ function on_collision(dt, shape_a, shape_b, mtv_x, mtv_y)
 			local object = shape.parent_entity
 			if object.can_jump == false then
 				object.vspeed = 0
-				object.y = floor.y - object.hit_height
-				print(object.y)
-				print(object.hit_height)
+			    object.y = floor.y - object.hit_height
+				--object.y = 
+				--print(object.y)
+				--print(object.hit_height)
 				object.can_jump = true
 				object.is_jumping = false
 			end
@@ -47,10 +50,40 @@ function love.keyreleased(key)
 end
 
 
+function foe_behaviour(foe)
+	foe.behaviour = math.random(1, 10)
+	--Timer.add(2, foe_behaviour(foe))
+end
+
 function foe_ai(dt)
 	for i=1, #foes do
 		local foe = foes[i]
-		foe.dir = (foe.x < player.x) and 1 or -1
+		foe.update_behaviour_timer = foe.update_behaviour_timer - dt
+		if foe.update_behaviour_timer < 0 then
+			foe_behaviour(foe)
+			foe.update_behaviour_timer = 2
+		end
+		
+		local player_dir = (player.x > foe.x) and -1 or 1
+		local weapon_pos = (player_dir == 1) and player.x+player.width or player.x
+		weapon_pos = weapon_pos + player.weapon.length*player_dir/2
+		
+		if (foe.x+foe.width/2 - weapon_pos)^2 < 5000 then
+			if foe.behaviour < 5 then
+				--foe.anim = foe_attack
+				local var = 0
+			end
+		else
+			::nbehaviour::
+			if foe.behaviour < 6 then
+				foe.dir = (foe.x < player.x) and 1 or -1
+			elseif foe.behaviour < 9 then
+				foe.dir = 0
+			else 
+				foe.dir = (foe.x > player.x) and 1 or -1
+			end
+		end
+
 		if player.is_jumping == false and foe.is_jumping == false then
 			foe.x = foe.x + foe.hspeed * foe.dir * dt
 		elseif foe.is_jumping == false then
@@ -76,21 +109,25 @@ function pop_foe()
 		foe.x = math.random(margin, love.graphics.getWidth()-margin) --
 	until (foe.x-player.x)^2 > 10000
 	foe.y = 400
-	foe.height = 24
+	foe.height = 64
 	foe.width =  24
 	foe.hit_width = 24
-	foe.hit_height = 24
+	foe.hit_height = 64
 	foe.collider = Collider:addRectangle(foe.x, foe.y, foe.hit_width, foe.hit_height)
 	foe.collider.type = 4 -- type == foe
 	foe.collider.genre = 1
 	foe.collider.parent_entity = foe
 	foe.dir = (foe.x < player.x) and 1 or -1 -- facing toward player
 	foe.vspeed = vspeed
-	foe.hspeed = 100
+	foe.hspeed = 70
 	foe.can_jump = false
 	foe.is_jumping = true
 	foe.touching_right_wall = false
 	foe.touching_left_wall = false
+	foe.resistance = math.random(1, 3)
+	foe.behaviour = 0
+	foe.update_behaviour_timer = 2
+	--Timer.addPeriodic(2, foe_behaviour)
 	return foe
 end
 
@@ -101,6 +138,19 @@ function break_combo()
 	current_combo_score = 0
 end
 
+function max_combo()
+	score = score + current_combo * current_combo_score
+	for i=1, #foes do
+		local foe = foes[i]
+		score = score + current_combo
+		foe = nil
+	end
+	foes = nil
+	foes = {}
+	current_combo = 0
+	current_combo = 0 	current_combo_score = 0
+	--anim = kill_all
+end
 
 function update_colliders(dt)
 	for i=1, #foes do
@@ -164,13 +214,13 @@ function love.load()
 	player.touching_right_wall = false
 	player.touching_left_wall = false
 	
-	--[[player.weapon = {}
+	player.weapon = {}
 	player.weapon.type = "bat"
-	player.weapon.length = 10
-	player.weapon.width = 2
-	player.weapon.angle = 0
-	player.weapon.collider = Collider:addRectangle(player.x-10, player.y-10, player.weapon.width, player.weapon.length)
-	player.weapon.collider.type = 5 -- type == weapon]]--
+	player.weapon.length = 60
+	--player.weapon.width = 2
+	--player.weapon.angle = 0
+	--player.weapon.collider = Collider:addRectangle(player.x-10, player.y-10, player.weapon.width, player.weapon.length)
+	--player.weapon.collider.type = 5 -- type == weapon]]--
 	
 	floor = {}
 	floor.x = 0
@@ -187,6 +237,24 @@ function love.load()
 	ceiling.collider.type = 3 -- type == ceiling
 	
 	foes = {}
+	foe_color = {}
+	foe_color[1] = {220, 20, 20}
+	foe_color[2] = {20, 220, 20}
+	foe_color[3] = {20, 20, 220}
+	
+	
+	particle_image = love.graphics.newImage("particle.png")
+	particles = love.graphics.newParticleSystem(particle_image, 200)
+	particles:start()
+	particles:setEmissionRate(25)
+	particles:setSizes(10, 0)
+	particles:setPosition(0, 20)
+	particles:setAreaSpread("uniform", 10, 10)
+	particles:setInsertMode("random")
+	particles:setRotation(math.pi * 1.5)
+	--particles:setParticleLifetime(lifeTime)
+	particles:setDirection(math.pi)
+	particles:setColors(255, 255, 255, 25)
 end
 
 
@@ -196,6 +264,7 @@ function love.update(dt)
 	
 	t = t + dt
 	effect:send("time", t)
+	particles:update(dt)
 	
 	if freeze == false then
 		foe_timer = foe_timer + dt
@@ -222,20 +291,43 @@ function love.update(dt)
 		end
 	
 		if love.keyboard.isDown("a") then
+			local weapon_pos = (player.dir == 1) and player.x+player.width or player.x
+			weapon_pos = weapon_pos + player.weapon.length*player.dir/2
+			weapon_aim = 1 -- horizontal hit
+			if love.keyboard.isDown("up") then
+				weapon_aim = 2 -- upward hit
+			elseif love.keyboard.isDown("down") then
+				weapon_aim = 3 -- downward hit
+			end
+			
 			for i=#foes, 1, -1 do
 				local foe = foes[i]
-				if (foe.x+foe.width/2 - player.x+player.width/2)^2 + (foe.y+foe.height/2 - player.y+player.height/2)^2 < 10000 then
-				--if foe.x+foe.width/2 - player.x+pla
+				--print(player.dir)	
+				print("foe.resistance"..foe.resistance)
+				print("weapon_aim"..weapon_aim)
+				if (foe.x+foe.width/2 - weapon_pos)^2 < 5000 then --+ (foe.y+foe.height/2 - player.y+player.height/2)^2 < 5000 then
 					--if player.is_attacking == false then
+					if foe.resistance ~= weapon_aim then
 						table.remove(foes, i)
-						current_combo = current_combo + 1 
-						print("current combo"..current_combo)
-						Timer.add(2, break_combo)
-						Timer.add(0.1, function() if freeze then freeze = false end end)
-						if spawn_delay > 0.7 then
-							spawn_delay = spawn_delay - spawn_delay/10
+						if break_combo_handle then
+							Timer.cancel(break_combo_handle)
 						end
-						freeze = true
+						current_combo = current_combo + 1 
+						current_combo_score = current_combo_score + 1
+						print("current combo"..current_combo)
+						if current_combo > 20 then
+							max_combo()
+							break
+						else
+							break_combo_handle = Timer.add(2, break_combo)
+							Timer.add(0.6, function() if freeze then freeze = false end end)
+							if spawn_delay > 0.7 then
+								spawn_delay = spawn_delay - spawn_delay/10
+							end
+							--freeze = true
+						end
+					end
+						--freeze = true
 						--strike()
 						--end
 					--current_animation = swing_weapon	
@@ -254,7 +346,7 @@ end
 
 
 function love.draw()
-    love.graphics.setShader(effect)
+    --love.graphics.setShader(effect)
 	
     --love.graphics.setColor(200, 20, 20)
 	player.collider:draw('line')
@@ -265,11 +357,22 @@ function love.draw()
 	
 	--player.weapon.collider:draw('line')
 	
+	love.graphics.print("SCORE "..score, love.graphics.getWidth()/2, 100)
+	love.graphics.print("COMBO "..current_combo, love.graphics.getWidth()/2, 150)
+	
 	for i=1, #foes do
 		local foe = foes[i]
+		love.graphics.setColor(unpack(foe_color[foe.resistance]))
 		foe.collider:draw("line")
+		love.graphics.setColor(255, 255, 255)
 		--love.graphics.rectangle("line", foe.x, foe.y, foe.width+2, foe.height+2)
 	end	
+	
+	if freeze then
+		love.graphics.circle("line", player.x+player.width/2+player.weapon.length*player.dir, player.y+player.height/2, 10)
+		--love.graphics.draw(particles, player.x+player.width/2+player.weapon.length*player.dir, player.y+player.height/2)
+	end
+	
 end
 
 
